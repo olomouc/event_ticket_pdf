@@ -1,0 +1,4 @@
+name = Event PDF custom
+description = Make fields available to the pdf 
+dependencies[] = commerce_event_ticket
+core = 7.x

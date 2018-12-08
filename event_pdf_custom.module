@@ -1,0 +1,157 @@
+<?php
+
+/**
+ * @file
+ * TODO: Enter file description here.
+ */
+
+
+function event_pdf_custom_theme_registry_alter(&$theme_registry) {
+	if (isset($theme_registry['commerce_event_ticket_pdf_info'])) {
+		$theme_registry['commerce_event_ticket_pdf_info']['function'] = 'event_pdf_custom_commerce_event_ticket_pdf_info';
+	}
+}
+
+
+function event_pdf_custom_preprocess_commerce_event_ticket_pdf_info(&$variables) {
+  $ticket = $variables['ticket'];
+  $order = commerce_order_load($ticket->order_id);
+  $product = commerce_product_load($ticket->product_id);
+#  $profile = commerce_customer_profile_load($ticket->profile_id);
+  $owner = user_load($order->uid);
+  $node = node_load($ticket->nid);
+  
+
+  
+  global $user;
+  $uid = $user->uid;
+  $default_pid = commerce_addressbook_get_default_profile_id($uid,'billing');
+#  $profile = commerce_customer_profile_load($default_pid);
+#  dpm($profile);
+#  dpm(debug_backtrace());
+  $first_line = commerce_customer_profile_load($default_pid->commerce_customer_billing['und']['profiles'][0]);
+#print render($first_line);
+  $giftgiver = drupal_render($first_line);
+  $variables['donor'] = $giftgiver;
+
+
+  if ($node) {
+    $variables['nid'] = $node->nid;
+    $variables['node_title'] = check_plain($node->title);
+    $variables['node_path'] = 'node/' . $node->nid;
+    $node_products_count = commerce_event_ticket_count_node_products($node);
+    global $base_url;
+    if ($base_url && ($domain = parse_url($base_url, PHP_URL_HOST))) {
+      $variables['node_shortlink'] = $domain . base_path() . $variables['node_path'];
+    }
+  }
+
+  $variables['display_product_title'] = !$node || ($node_products_count > 1 && $product->title != $node->title);
+  $variables['product_title'] = check_plain($product->title);
+
+  $variables['data'] = array(
+    t('Order number') => $order->order_number,
+    t('This is a gift from') => $order->mail,
+#    t('This is a gift from') => $address->first_name,  
+);
+  
+  $node = isset($ticket->nid) ? node_load($ticket->nid) : FALSE;
+  if ($node && !empty($node->field_date)) {
+    $date = field_view_value('node', $node, 'field_date', $node->field_date[$node->language][0]);
+    $event_date = drupal_render($date);
+    $variables['data'][t('Date of Event')] = $event_date;
+  }
+    if ($node && !empty($node->field_ticket_text)) {
+    $field_ticket_text = field_view_field('node', $node, 'field_ticket_text', array(
+       'label' => 'hidden',
+));
+    $event_text = drupal_render($field_ticket_text);
+    $variables['tickettext'] = $event_text;  
+  }
+    $images = field_get_items('node', $node, 'field_ticket_image');
+    if (!empty($images)) {
+    $field_ticket_image = field_view_value('node', $node, 'field_ticket_image', $images[0], array(
+       'label' => 'hidden',
+       'type' => 'image',
+));
+    $event_image = drupal_render($field_ticket_image);
+    $variables['eventimage'] = $event_image;
+  }
+}
+
+
+function event_pdf_custom_commerce_event_ticket_pdf_info($variables) {
+  $output = array();
+      $output['title'] = array(
+    '#prefix' => '<h1>',
+    '#suffix' => '</h1>',
+    '#markup' => t('A Gift Voucher'),
+    );
+    
+
+//   $output['giftimage'] = $variables['eventimage'];
+
+/*      $output['giftimagetwo'] = array(
+    '#markup' => $variables['eventimage'],
+   ); 
+*/
+    $output['bumftext'] = array(
+    '#label_display' => 'hidden',
+    '#prefix' => '<p>',
+    '#suffix' => '</p>',
+    '#markup' => $variables['tickettext'],
+    );
+
+    $output['kindperson'] = array(
+   '#prefix' => '<p>',
+    '#suffix' => '</p>',
+    '#markup' => $variables['donor'],
+   ); 
+
+    if (isset($variables['nid'])) {
+    $output['subtitle'] = array(
+      '#prefix' => '<h4>',
+      '#suffix' => '</h4>',
+      '#markup' => $variables['node_title'],
+      '#attributes' => array(
+      'color' => '#cccccc',
+    ),
+    );
+/*    if (isset($variables['node_shortlink'])) {
+      $output['shortlink'] = array(
+        '#prefix' => '<p>',
+        '#suffix' => '</p>',
+        '#markup' => l(
+          $variables['node_shortlink'],
+          $variables['node_path'],
+          array('absolute' => TRUE, 'html' => TRUE)
+        ),
+      );
+
+     }
+*/
+  }
+  if ($variables['display_product_title']) {
+    $output['product_title'] = array(
+      '#prefix' => '<p>',
+      '#suffix' => '</p>',
+      '#markup' => t('Product: !title', array('!title' => $variables['product_title'])),
+      '#attributes' => array(
+      'color' => '#cccccc',
+    ),
+    );
+  }
+  $rows = array();
+  foreach ($variables['data'] as $label => $value) {
+    $rows[] = array('<strong>' . $label . '</strong>', $value);
+  }
+  $output['table'] = array(
+    '#theme' => 'table',
+    '#header' => array(),
+    '#rows' => $rows,
+    '#attributes' => array(
+      'cellpadding' => '5',
+    ),
+  );
+  return drupal_render($output);
+}
