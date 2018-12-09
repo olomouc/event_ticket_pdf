@@ -22,7 +22,7 @@ function event_pdf_custom_preprocess_commerce_event_ticket_pdf_info(&$variables)
   $node = node_load($ticket->nid);
   
 
-  
+/*  
   global $user;
   $uid = $user->uid;
   $default_pid = commerce_addressbook_get_default_profile_id($uid,'billing');
@@ -33,7 +33,7 @@ function event_pdf_custom_preprocess_commerce_event_ticket_pdf_info(&$variables)
 #print render($first_line);
   $giftgiver = drupal_render($first_line);
   $variables['donor'] = $giftgiver;
-
+*/
 
   if ($node) {
     $variables['nid'] = $node->nid;
@@ -88,10 +88,11 @@ function event_pdf_custom_commerce_event_ticket_pdf_info($variables) {
     '#markup' => t('A Gift Voucher'),
     );
     
+/**
+* Output possibilities for image field
+   $output['giftimage'] = $variables['eventimage'];
 
-//   $output['giftimage'] = $variables['eventimage'];
-
-/*      $output['giftimagetwo'] = array(
+   $output['giftimagetwo'] = array(
     '#markup' => $variables['eventimage'],
    ); 
 */
@@ -101,13 +102,13 @@ function event_pdf_custom_commerce_event_ticket_pdf_info($variables) {
     '#suffix' => '</p>',
     '#markup' => $variables['tickettext'],
     );
-
+/*
     $output['kindperson'] = array(
    '#prefix' => '<p>',
     '#suffix' => '</p>',
     '#markup' => $variables['donor'],
    ); 
-
+*/
     if (isset($variables['nid'])) {
     $output['subtitle'] = array(
       '#prefix' => '<h4>',
